@@ -5,15 +5,12 @@ require_relative 'env'
 
 class REPL
   def initialize
-    @env = Env.new(nil)
-    {
-      :+ => ->(*args) { MalNumber.new(args.map(&:value).reduce(&:+)) },
-      :- => ->(*args) { MalNumber.new(args.map(&:value).reduce(&:-)) },
-      :* => ->(*args) { MalNumber.new(args.map(&:value).reduce(&:*)) },
-      :/ => ->(*args) { MalNumber.new(args.map(&:value).reduce(&:/)) }
-    }.each do |k, v|
-      @env.set(k, v)
-    end
+    @env = Env.new(nil, %i(+ - * /), [
+                     ->(*args) { MalNumber.new(args.map(&:value).reduce(&:+)) },
+                     ->(*args) { MalNumber.new(args.map(&:value).reduce(&:-)) },
+                     ->(*args) { MalNumber.new(args.map(&:value).reduce(&:*)) },
+                     ->(*args) { MalNumber.new(args.map(&:value).reduce(&:/)) }
+                   ])
   end
 
   def repl
@@ -53,11 +50,26 @@ class REPL
           let_env.set(var, _eval(val, let_env))
         end
         return _eval(val[2], let_env)
+      when :do
+        return val.cdr.map { |val| _eval_ast(val, env) }[-1]
+      when :if
+        condition = _eval(val[1], env)
+        which = (condition == $nil || condition == $false) ? 3 : 2
+        return $nil if which == 3 && val.length < 4
+        return _eval(val[which], env)
+      when :"fn*"
+        return MalFunction.new(env, val[1], val.cdr.cdr.car)
       end
     end
 
     evalled = _eval_ast(val, env)
-    evalled[0].call(*evalled.value[1..])
+    func = evalled[0]
+    args = evalled[1..]
+    if func.instance_of?(MalFunction)
+      _eval(func.body, func.bind(*args))
+    else
+      func.call(*args)
+    end
   end
 
   def _print(val)

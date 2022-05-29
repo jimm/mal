@@ -52,6 +52,16 @@ class MalList < MalType
     @value[key]
   end
 
+  def car
+    @value[0]
+  end
+
+  def cdr
+    cdr_list = MalList.new
+    cdr_list.instance_variable_set(:@value, @value[1..])
+    cdr_list
+  end
+
   def append(val)
     @value << val
   end
@@ -125,5 +135,24 @@ class MalKeyword < MalType
 
   def to_s
     ":#{@value}"
+  end
+end
+
+class MalFunction < MalType
+  attr_reader :body
+
+  def initialize(env, arglist, body)
+    super('#<function>')
+    @env = env
+    @arglist = arglist
+    @body = body
+  end
+
+  def bind(*args)
+    call_env = Env.new(@env, @arglist, args)
+    @arglist.each_with_index do |arg_sym, i|
+      call_env.set(arg_sym, args[i])
+    end
+    call_env
   end
 end

@@ -96,7 +96,7 @@ class Reader
     when /\A"/
       parse_string_token(token)
     when nil
-      nil
+      $nil
     else
       MalSymbol.new(token)
     end

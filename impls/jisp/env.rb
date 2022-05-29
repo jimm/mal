@@ -1,7 +1,10 @@
 class Env
-  def initialize(outer_env)
+  def initialize(outer_env, bindings = [], exprs = [])
     @outer_env = outer_env
     @data = {}
+    bindings.each_with_index do |sym, i|
+      set(sym, exprs[i])
+    end
   end
 
   def set(key, val)
