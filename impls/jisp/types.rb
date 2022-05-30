@@ -16,6 +16,10 @@ class MalNil < MalType
   def to_s
     'nil'
   end
+
+  def length
+    0
+  end
 end
 $nil = MalNil.new
 
@@ -38,14 +42,18 @@ class MalList < MalType
 
   attr_reader :open_delim, :close_delim
 
-  def initialize
-    @value = []
+  def initialize(value = [])
+    @value = value
     @open_delim = '('
     @close_delim = ')'
   end
 
   def empty?
     @value.empty?
+  end
+
+  def length
+    @value.length
   end
 
   def [](key)
@@ -72,16 +80,16 @@ class MalList < MalType
 end
 
 class MalVector < MalList
-  def initialize
-    super
+  def initialize(value = [])
+    super(value)
     @open_delim = '['
     @close_delim = ']'
   end
 end
 
 class MalHashMap < MalList
-  def initialize
-    @value = {}
+  def initialize(value = {})
+    @value = value
     @open_delim = '{'
     @close_delim = '}'
     @next_entry = :key
@@ -115,8 +123,14 @@ class MalString < MalType
   def to_readable_s
     str = ''
     @value.each_char do |ch|
-      str << '\\' if ["\n", '\\', '"'].include?(ch)
-      str << ch
+      case ch
+      when "\n"
+        str << "\\n"
+      when '\\', '"'
+        str << "\\#{ch}"
+      else
+        str << ch
+      end
     end
     '"' + str + '"'
   end
@@ -149,10 +163,6 @@ class MalFunction < MalType
   end
 
   def bind(*args)
-    call_env = Env.new(@env, @arglist, args)
-    @arglist.each_with_index do |arg_sym, i|
-      call_env.set(arg_sym, args[i])
-    end
-    call_env
+    Env.new(@env, @arglist, args)
   end
 end

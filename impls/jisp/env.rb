@@ -1,8 +1,15 @@
+require_relative 'types'
+
 class Env
   def initialize(outer_env, bindings = [], exprs = [])
     @outer_env = outer_env
     @data = {}
     bindings.each_with_index do |sym, i|
+      if sym.value == :&
+        rest = MalList.new(exprs[i..])
+        set(bindings[i+1], rest)
+        break
+      end
       set(sym, exprs[i])
     end
   end

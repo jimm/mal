@@ -2,15 +2,19 @@ require 'readline'
 require_relative 'reader'
 require_relative 'printer'
 require_relative 'env'
+require_relative 'core'
 
 class REPL
+  PREDEFINED_LISP_FUNCTIONS = [
+    "(def! not (fn* (a) (if a false true)))"
+  ]
+
   def initialize
-    @env = Env.new(nil, %i(+ - * /), [
-                     ->(*args) { MalNumber.new(args.map(&:value).reduce(&:+)) },
-                     ->(*args) { MalNumber.new(args.map(&:value).reduce(&:-)) },
-                     ->(*args) { MalNumber.new(args.map(&:value).reduce(&:*)) },
-                     ->(*args) { MalNumber.new(args.map(&:value).reduce(&:/)) }
-                   ])
+    @env = Env.new(nil)
+    $core_ns.each { |sym, func| @env.set(sym, func) }
+    PREDEFINED_LISP_FUNCTIONS.each do |func_str|
+      _eval(_read(func_str), @env)
+    end
   end
 
   def repl
@@ -51,7 +55,7 @@ class REPL
         end
         return _eval(val[2], let_env)
       when :do
-        return val.cdr.map { |val| _eval_ast(val, env) }[-1]
+        return val.cdr.map { |val| _eval(val, env) }[-1]
       when :if
         condition = _eval(val[1], env)
         which = (condition == $nil || condition == $false) ? 3 : 2
