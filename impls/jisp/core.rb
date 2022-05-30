@@ -2,7 +2,7 @@ require_relative 'types'
 require_relative 'printer'
 
 def equals(a, b)
-  return $false unless a.instance_of?(b.class)
+  return $false unless a.is_a?(b.class) || b.is_a?(a.class)
 
   case a
   when MalHashMap
@@ -20,14 +20,13 @@ def equals(a, b)
 end
 
 $core_ns = {
+  # **************** math ****************
   :+ => ->(*args) { MalNumber.new(args.map(&:value).reduce(&:+)) },
   :- => ->(*args) { MalNumber.new(args.map(&:value).reduce(&:-)) },
   :* => ->(*args) { MalNumber.new(args.map(&:value).reduce(&:*)) },
   :/ => ->(*args) { MalNumber.new(args.map(&:value).reduce(&:/)) },
-  :prn => lambda { |*args|
-    puts pr_str(args[0], true)
-    $nil
-  },
+
+  # **************** lists ****************
   :list => lambda { |*args|
     list = MalList.new
     args.each { |arg| list.append(arg) }
@@ -42,6 +41,8 @@ $core_ns = {
   :count => lambda { |*args|
     MalNumber.new(args[0].length)
   },
+
+  # **************** comparators ****************
   :"=" => ->(*args) { equals(args[0], args[1]) },
   :"<" => lambda { |*args|
     args[0].value < args[1].value ? $true : $false
@@ -54,5 +55,21 @@ $core_ns = {
   },
   :">=" => lambda { |*args|
     args[0].value >= args[1].value ? $true : $false
+  },
+
+  # **************** string functions ****************
+  :"pr-str" => lambda { |*args|
+    MalString.new(args.map { |arg| pr_str(arg, true) }.join(' '))
+  },
+  :str => lambda { |*args|
+    MalString.new(args.map { |arg| pr_str(arg, false) }.join(''))
+  },
+  :prn => lambda { |*args|
+    puts args.map { |arg| pr_str(arg, true) }.join(' ')
+    $nil
+  },
+  :println => lambda { |*args|
+    puts args.map { |arg| pr_str(arg, false) }.join(' ')
+    $nil
   }
 }
