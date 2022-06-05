@@ -8,15 +8,16 @@ def pr_str(val, readably = false)
     else
       val.to_s
     end
+  when MalVector
+    '[' + val.map { |v| pr_str(v, readably) }.join(' ') + ']'
   when MalHashMap
-    val.open_delim +
-      val.map do |k, v|
-        [pr_str(k, readably = readably), pr_str(v, readably = readably)]
-      end
-         .flatten.join(' ') +
-      val.close_delim
-  when MalList, MalVector
-    val.open_delim + val.map { |v| pr_str(v, readably = readably) }.join(' ') + val.close_delim
+    innards = val
+              .map { |k, v| [pr_str(k, readably), pr_str(v, readably)] }
+              .flatten.join(' ')
+    innards = val.map { |k, v| [k, v] }.flatten.map { |elt| pr_str(elt, readably) }.join(' ')
+    '{' + innards + '}'
+  when MalList
+    '(' + val.map { |v| pr_str(v, readably) }.join(' ') + ')'
   else
     val.to_s
   end

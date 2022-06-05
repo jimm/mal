@@ -24,28 +24,31 @@ def quasiquote(ast)
 
   case ast
   when MalHashMap, MalSymbol
-    return MalList.new([MalSymbol.new(:quote), ast])
+    MalList.new([MalSymbol.new(:quote), ast])
   when MalVector
-    return MalList.new([MalSymbol.new(:vec)] + ast.value)
+    MalList.new([MalSymbol.new(:vec), quasiquote_list(MalList.new(ast.value))])
   when MalList
-    return quasiquote_list(ast)
+    if ast.length == 2 && ast[0].value == :unquote
+      ast[1]
+    else
+      quasiquote_list(ast)
+    end
   else
-    return ast
+    ast
   end
 end
 
 def quasiquote_list(list)
   return list if list.empty?
-  elt = list[0]
-  case elt.value
-  when :"splice-unquote"
-    MalList.new([MalSymbol.new(:concat), list[1], quasiquote(list.cdr.cdr)])
-  when :unquote
-    list[1]
-  else
-    retvals = [MalSymbol.new(:cons), quasiquote(elt), quasiquote(list.cdr)]
-    MalList.new(retvals)
+  acc = MalList.new
+  list.reverse_each do |elt|
+    if elt.instance_of?(MalList) && elt.length == 2 && elt[0].value == :"splice-unquote"
+      acc = MalList.new([MalSymbol.new(:concat), elt[1], acc])
+    else
+      acc = MalList.new([MalSymbol.new(:cons), quasiquote(elt), acc])
+    end
   end
+  acc
 end
 
 $core_ns = {
@@ -68,9 +71,15 @@ $core_ns = {
   :count => ->(*args) { MalNumber.new(args[0].length) },
   :cons => ->(*args) { MalList.new([args[0]] + args[1].value) },
   :concat => ->(*args) { MalList.new(args.map(&:value).flatten) },
-  :vec => ->(*args) {
-    args[0].instance_of?(MalVector) ? args[0] : MalVector.new(args[0].value)
-  },
+  :vec => ->(*args) do
+    if args.empty?
+      MalVector.new
+    elsif args[0].instance_of?(MalVector)
+      args[0]
+    else
+      MalVector.new(args[0].value)
+    end
+  end,
 
   # **************** comparators ****************
   :"=" => ->(*args)  { equals(args[0],  args[1]) },

@@ -40,16 +40,12 @@ $false = MalFalse.new
 class MalList < MalType
   include Enumerable
 
-  attr_reader :open_delim, :close_delim
-
   def initialize(value = [])
     @value = value
-    @open_delim = '('
-    @close_delim = ')'
   end
 
   def empty?
-    @value.empty?
+    length == 0
   end
 
   def length
@@ -65,10 +61,7 @@ class MalList < MalType
   end
 
   def cdr
-    cdr_list = MalList.new
-    new_value = @value[1..] || $nil
-    cdr_list.instance_variable_set(:@value, new_value)
-    cdr_list
+    MalList.new(@value[1..] || $nil)
   end
 
   def append(val)
@@ -81,18 +74,11 @@ class MalList < MalType
 end
 
 class MalVector < MalList
-  def initialize(value = [])
-    super(value)
-    @open_delim = '['
-    @close_delim = ']'
-  end
 end
 
 class MalHashMap < MalList
   def initialize(value = {})
     @value = value
-    @open_delim = '{'
-    @close_delim = '}'
     @next_entry = :key
     @key = nil
   end
