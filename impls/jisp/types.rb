@@ -66,7 +66,8 @@ class MalList < MalType
 
   def cdr
     cdr_list = MalList.new
-    cdr_list.instance_variable_set(:@value, @value[1..])
+    new_value = @value[1..] || $nil
+    cdr_list.instance_variable_set(:@value, new_value)
     cdr_list
   end
 
@@ -164,5 +165,13 @@ class MalFunction < MalType
 
   def bind(*args)
     Env.new(@env, @arglist, args)
+  end
+end
+
+class MalAtom < MalType
+  attr_accessor :value
+
+  def to_s
+    "(atom #{value})"
   end
 end

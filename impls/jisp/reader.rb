@@ -35,8 +35,7 @@ class Reader
     while !str.empty? && str =~ TOKEN_REGEX
       token = Regexp.last_match(1)
       break if token.strip.empty?
-      break if token[0] == ';'  # comment
-      tokens << token
+      tokens << token unless token[0] == ';' # skip comments
 
       str = str.sub(/\A[\s,]+/, '')[token.length..]
     end
@@ -48,18 +47,18 @@ class Reader
     when '(', '[', '{'
       opening_delim = self.next
       read_list(opening_delim, CLOSING_DELIMS[opening_delim])
-    # when "'", '`', '~', '~@'
-    #   reader_macro(QUOTE_MACROS[self.next])
+    when "'", '`', '~', '~@', '@'
+      reader_macro(QUOTE_MACROS[self.next])
+    when '@'
+      MalList.new([MalSymbol.new('deref'), read_atom])
     else
       read_atom
     end
   end
 
-  # def reader_macro(func_name)
-  #   list = MalList.new
-  #   list.append(MalSymbol.new(func_name))
-  #   list.append(read_form)
-  # end
+  def reader_macro(func_name)
+    MalList.new([MalSymbol.new(func_name), read_form])
+  end
 
   def read_list(opening_delim, closing_delim)
     list = case opening_delim
@@ -71,7 +70,7 @@ class Reader
              MalHashMap.new
            end
     while peek != closing_delim
-      raise "unbalanced '#{opening_delim}" if peek.nil?
+      # raise "unbalanced '#{opening_delim}'" if peek.nil?
       list.append(read_form)
     end
     self.next                   # eat closing delim

@@ -1,6 +1,9 @@
+require 'set'
 require_relative 'types'
 
 class Env
+  attr_reader :data, :outer_env
+
   def initialize(outer_env, bindings = [], exprs = [])
     @outer_env = outer_env
     @data = {}
@@ -15,15 +18,14 @@ class Env
   end
 
   def set(key, val)
-    key = key.value if key.is_a?(MalType)
-    @data[key] = val
+    @data[lookup(key)] = val
   end
 
   def get(key)
     env = find(key)
     raise "#{key} not found" unless env
 
-    env[key.value]
+    env[lookup(key)]
   end
 
   def has_key?(key)
@@ -31,10 +33,25 @@ class Env
   end
 
   def find(key)
-    lookup = key.is_a?(MalType) ? key.value : key
-    return @data if @data.has_key?(lookup)
-    return nil unless @outer_env
+    seen = Set.new
+    curr = self
 
-    @outer_env.find(key)
+    while true
+      return nil if seen.include?(curr)
+      seen.add(curr)
+
+      data = curr.data
+      return data if data.has_key?(lookup(key))
+      curr = curr.outer_env
+      return nil unless curr
+    end
+  end
+
+  def lookup(key)
+    key.is_a?(MalType) ? key.value : key
+  end
+
+  def to_s
+    "#<Environment #{self.object_id} @outer_env=#{@outer_env}>"
   end
 end
